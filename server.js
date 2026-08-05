@@ -327,6 +327,8 @@ let puppeteerOptions = {
         '--disable-domain-reliability',
         '--disable-ipc-flooding-protection',
         '--disable-renderer-backgrounding',
+        '--blink-settings=imagesEnabled=false',
+        '--disable-remote-fonts',
         '--js-flags=--max-old-space-size=256'
     ],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
