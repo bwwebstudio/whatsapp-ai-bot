@@ -88,6 +88,9 @@ app.use(cors());
 app.use(express.json());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const EXCEL_FILE = path.join(__dirname, 'data.xlsx');
