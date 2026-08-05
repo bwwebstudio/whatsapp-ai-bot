@@ -275,7 +275,23 @@ let puppeteerOptions = {
         '--disable-accelerated-2d-canvas', 
         '--no-first-run', 
         '--no-zygote', 
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-default-apps',
+        '--disable-features=Translate,BackForwardCache,MediaRouter',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-component-update',
+        '--disable-domain-reliability',
+        '--disable-ipc-flooding-protection',
+        '--disable-renderer-backgrounding',
+        '--js-flags=--max-old-space-size=256'
     ],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 };
