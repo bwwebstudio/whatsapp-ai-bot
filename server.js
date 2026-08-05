@@ -91,6 +91,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+app.get('/ping', (req, res) => {
+    res.status(200).send('OK');
+});
 
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');
 const EXCEL_FILE = path.join(__dirname, 'data.xlsx');
@@ -264,6 +267,7 @@ function isWithinBusinessHours() {
 
 // WhatsApp Bot Logic
 let puppeteerOptions = { 
+    headless: true,
     args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
@@ -272,7 +276,8 @@ let puppeteerOptions = {
         '--no-first-run', 
         '--no-zygote', 
         '--disable-gpu'
-    ] 
+    ],
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 };
 
 if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -284,7 +289,11 @@ if (process.env.PUPPETEER_EXECUTABLE_PATH) {
 }
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014715805-alpha.html'
+    },
     puppeteer: puppeteerOptions
 });
 
@@ -302,6 +311,12 @@ client.on('qr', async (qr) => {
     }
 });
 
+client.on('loading_screen', (percent, message) => {
+    botStatus = `SYNCING (${percent}%)`;
+    emitLog(`WhatsApp Loading: ${percent}% - ${message}`, 'info');
+    io.emit('status', botStatus);
+});
+
 client.on('authenticated', () => {
     botStatus = 'AUTHENTICATING';
     emitLog('QR code scanned! Authenticating and syncing...', 'info');
@@ -310,6 +325,14 @@ client.on('authenticated', () => {
 
 client.on('auth_failure', msg => {
     emitLog('Authentication failure: ' + msg, 'error');
+    botStatus = 'AUTH FAILURE';
+    io.emit('status', botStatus);
+});
+
+client.on('disconnected', (reason) => {
+    emitLog('WhatsApp Disconnected: ' + reason, 'error');
+    botStatus = 'DISCONNECTED';
+    io.emit('status', botStatus);
 });
 
 client.on('ready', () => {
