@@ -352,6 +352,12 @@ const client = new Client({
 });
 
 client.on('qr', async (qr) => {
+    // CRITICAL FIX: If WhatsApp is ALREADY connected, ignore stray background QR events!
+    if (botStatus === 'READY') {
+        console.log('[DEBUG] Ignored stray background QR event because WhatsApp is ALREADY READY.');
+        return;
+    }
+
     console.log('\n--- QR CODE GENERATED ---');
     try {
         const qrImage = await qrcode.toDataURL(qr);
@@ -366,6 +372,8 @@ client.on('qr', async (qr) => {
 });
 
 client.on('loading_screen', (percent, message) => {
+    if (botStatus === 'READY') return;
+
     botStatus = `SYNCING (${percent}%)`;
     emitLog(`WhatsApp Loading: ${percent}% - ${message}`, 'info');
     io.emit('status', botStatus);
@@ -385,6 +393,7 @@ client.on('loading_screen', (percent, message) => {
 });
 
 client.on('authenticated', () => {
+    if (botStatus === 'READY') return;
     botStatus = 'AUTHENTICATING';
     emitLog('QR/OTP authenticated! Syncing WhatsApp...', 'info');
     io.emit('status', 'SYNCING...');
