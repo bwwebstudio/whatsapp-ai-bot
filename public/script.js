@@ -260,6 +260,39 @@ function removeBlocked(number) {
     }).then(() => fetchSettings());
 }
 
+// Request WhatsApp Pairing Code (OTP)
+function requestPairingCode() {
+    const numInput = document.getElementById('phone-number-input').value.trim();
+    if (!numInput) return alert('Please enter a phone number with country code (e.g. 919876543210)');
+
+    const display = document.getElementById('pairing-code-display');
+    const codeText = document.getElementById('pairing-code-text');
+
+    codeText.innerText = 'Generating...';
+    display.classList.remove('hidden');
+
+    fetch('/api/request-pairing-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ phoneNumber: numInput })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.code) {
+            // Format code nicely (e.g. ABCD-EFGH)
+            const raw = data.code;
+            codeText.innerText = raw.length === 8 ? `${raw.slice(0,4)}-${raw.slice(4)}` : raw;
+        } else {
+            alert('Error generating pairing code: ' + (data.error || 'Please try again after QR code loads'));
+            display.classList.add('hidden');
+        }
+    })
+    .catch(err => {
+        alert('Could not fetch pairing code: ' + err.message);
+        display.classList.add('hidden');
+    });
+}
+
 // Logs
 function addLog(msg, type = 'info') {
     const logs = document.getElementById('logs');

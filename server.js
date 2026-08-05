@@ -218,6 +218,26 @@ app.delete('/api/settings/blocked/:num', auth, (req, res) => {
     res.json({ success: true });
 });
 
+// WhatsApp Phone Number Pairing Code API
+app.post('/api/request-pairing-code', auth, async (req, res) => {
+    try {
+        const { phoneNumber } = req.body;
+        if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
+        
+        const cleanNumber = phoneNumber.replace(/\D/g, '');
+        if (cleanNumber.length < 10) return res.status(400).json({ error: 'Invalid phone number format' });
+
+        emitLog(`Generating Pairing Code for +${cleanNumber}...`, 'info');
+        const code = await client.requestPairingCode(cleanNumber);
+        emitLog(`Pairing Code generated: ${code}`, 'success');
+        res.json({ success: true, code });
+    } catch (err) {
+        console.error('Error requesting pairing code:', err);
+        emitLog(`Pairing Code error: ${err.message}`, 'error');
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Excel Upload
 app.post('/api/upload', auth, (req, res) => {
     if (!req.files || Object.keys(req.files).length === 0) {
@@ -306,10 +326,8 @@ if (process.env.PUPPETEER_EXECUTABLE_PATH) {
 
 const client = new Client({
     authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
-    webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014715805-alpha.html'
-    },
+    takeoverOnConflict: true,
+    takeoverTimeoutMs: 0,
     puppeteer: puppeteerOptions
 });
 
@@ -346,9 +364,12 @@ client.on('auth_failure', msg => {
 });
 
 client.on('disconnected', (reason) => {
-    emitLog('WhatsApp Disconnected: ' + reason, 'error');
-    botStatus = 'DISCONNECTED';
+    emitLog('WhatsApp Disconnected: ' + reason + '. Auto-reconnecting in 5 seconds...', 'error');
+    botStatus = 'RECONNECTING...';
     io.emit('status', botStatus);
+    setTimeout(() => {
+        client.initialize().catch(err => console.error('[RECONNECT ERROR]', err));
+    }, 5000);
 });
 
 client.on('ready', () => {
