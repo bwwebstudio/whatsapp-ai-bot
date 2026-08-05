@@ -439,7 +439,7 @@ client.on('message', async (message) => {
 
 client.initialize();
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`\n=========================================`);
     console.log(`🚀 Secure Dashboard running at http://localhost:${PORT}`);
