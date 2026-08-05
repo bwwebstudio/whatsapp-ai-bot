@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus SaaS WhatsApp AI Suite</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .log-container { max-height: 400px; overflow-y: auto; }
+        .log-container::-webkit-scrollbar { width: 6px; }
+        .log-container::-webkit-scrollbar-track { background: #1e293b; }
+        .log-container::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .hidden { display: none !important; }
+        .tab-btn.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border-right: 3px solid #3b82f6; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        @media (max-width: 768px) {
+            .tab-btn.active { border-right: none; border-bottom: 3px solid #3b82f6; }
+        }
+    </style>
+    <script>
+        if (window.location.protocol === 'file:') {
+            alert("⚠️ WARNING: Please do not open this HTML file directly! \n\nYou must first double-click 'run.bat' to start the server, and then open http://localhost:3000 in your browser to login.");
+        }
+    </script>
+</head>
+<body class="h-screen overflow-hidden flex flex-col items-center justify-center">
+
+    <!-- Login Section -->
+    <div id="login-section" class="glass p-8 rounded-2xl shadow-2xl w-[calc(100%-2rem)] max-w-md text-center">
+        <div class="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/30">
+            <i class="fas fa-robot text-3xl text-blue-400"></i>
+        </div>
+        <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Nexus Suite</h1>
+        <p class="text-slate-400 mb-8 text-sm">Enterprise WhatsApp AI Dashboard</p>
+        <input type="password" id="password" placeholder="Enter Password (default: admin)" class="w-full p-4 mb-4 bg-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 border border-slate-700">
+        <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-lg transition-all shadow-lg shadow-blue-500/30">Access Control Panel</button>
+        <p id="login-error" class="text-red-400 mt-3 hidden">Incorrect password</p>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboard-section" class="w-full h-full hidden flex-col md:flex-row pb-12">
+        <!-- Sidebar / Top Nav -->
+        <div class="w-full md:w-64 glass flex-shrink-0 flex flex-col pt-4 md:pt-8 md:h-full z-10 border-b border-slate-700/50 md:border-none">
+            <div class="px-4 md:px-6 mb-4 md:mb-8 flex justify-between items-center md:block">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-robot text-2xl text-blue-400"></i>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Nexus AI</h1>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Pro SaaS Edition</p>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <span id="bot-status-mobile" class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full font-bold border border-yellow-500/50 block text-center text-xs">Init...</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-row md:flex-col gap-1 md:gap-2 overflow-x-auto md:overflow-visible px-2 md:px-0 pb-2 md:pb-0 hide-scrollbar" style="-webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                <button onclick="switchTab('tab-status')" id="btn-tab-status" class="tab-btn active whitespace-nowrap flex-1 md:text-left px-4 md:px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-semibold text-sm md:text-base rounded-lg md:rounded-none flex items-center justify-center md:justify-start"><i class="fas fa-signal mr-2 md:w-5 text-center"></i> Live Connection</button>
+                <button onclick="switchTab('tab-persona')" id="btn-tab-persona" class="tab-btn whitespace-nowrap flex-1 md:text-left px-4 md:px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-semibold text-sm md:text-base rounded-lg md:rounded-none flex items-center justify-center md:justify-start"><i class="fas fa-user-gear mr-2 md:w-5 text-center"></i> Bot Identity & Prompts</button>
+                <button onclick="switchTab('tab-rules')" id="btn-tab-rules" class="tab-btn whitespace-nowrap flex-1 md:text-left px-4 md:px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-semibold text-sm md:text-base rounded-lg md:rounded-none flex items-center justify-center md:justify-start"><i class="fas fa-list mr-2 md:w-5 text-center"></i> Rules & Keywords</button>
+                <button onclick="switchTab('tab-brain')" id="btn-tab-brain" class="tab-btn whitespace-nowrap flex-1 md:text-left px-4 md:px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-semibold text-sm md:text-base rounded-lg md:rounded-none flex items-center justify-center md:justify-start"><i class="fas fa-brain mr-2 md:w-5 text-center"></i> AI Key & Excel Knowledge</button>
+                <button onclick="switchTab('tab-settings')" id="btn-tab-settings" class="tab-btn whitespace-nowrap flex-1 md:text-left px-4 md:px-6 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-semibold text-sm md:text-base rounded-lg md:rounded-none flex items-center justify-center md:justify-start"><i class="fas fa-shield-halved mr-2 md:w-5 text-center"></i> Admin Password</button>
+            </div>
+            
+            <div class="hidden md:block mt-auto p-6 text-sm text-slate-500">
+                <span id="bot-status" class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full font-bold border border-yellow-500/50 block text-center">Initializing...</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow p-4 md:p-8 flex flex-col gap-6 overflow-y-auto relative">
+            
+            <!-- Tab: Connection & Live Status -->
+            <div id="tab-status" class="tab-content h-full flex flex-col">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">WhatsApp Connection</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                    <!-- QR Code Area -->
+                    <div class="glass p-8 rounded-2xl flex flex-col items-center justify-center min-h-[400px]">
+                        <h3 class="text-xl font-bold mb-6 text-slate-300">Scan to Connect</h3>
+                        <div id="qr-container" class="bg-white p-4 rounded-xl shadow-2xl flex items-center justify-center w-[280px] h-[280px]">
+                            <p class="text-slate-800 font-bold text-center">Waiting for QR Code...<br><span class="text-xs text-slate-500">(Could take a minute if WhatsApp is loading)</span></p>
+                        </div>
+                        <p id="qr-success" class="text-emerald-400 font-bold text-lg mt-6 hidden"><i class="fas fa-check-circle mr-2"></i> Connected Successfully!</p>
+                    </div>
+
+                    <!-- Live Logs Area -->
+                    <div class="glass p-6 rounded-2xl flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-terminal text-blue-400"></i> Live Activity Console</h2>
+                            <button onclick="clearLogs()" class="text-sm text-slate-400 hover:text-white"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
+                        </div>
+                        <div id="logs" class="log-container flex-grow bg-black/50 p-4 rounded-lg font-mono text-xs flex flex-col gap-2 border border-slate-800">
+                            <div class="text-slate-500">Waiting for events...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Bot Persona, Identity & Prompts -->
+            <div id="tab-persona" class="tab-content hidden h-full flex flex-col">
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">Bot Persona & Customization</h2>
+                <p class="text-slate-400 text-sm mb-6">Customize how the AI behaves, what name it uses, fallback messages, and typing speeds.</p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- Bot Identity Card -->
+                    <div class="glass p-6 rounded-2xl flex flex-col">
+                        <h3 class="text-xl font-bold mb-4 text-emerald-400 flex items-center gap-2">
+                            <i class="fas fa-id-card"></i> Bot Identity & Name
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">Owner / Representative Name</label>
+                                <input type="text" id="persona-owner-name" placeholder="e.g. Burhanuddin" class="w-full p-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-emerald-500 text-sm text-white">
+                                <p class="text-[11px] text-slate-400 mt-1">The name your bot introduces itself as when asked.</p>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">Company / Brand Name</label>
+                                <input type="text" id="persona-company-name" placeholder="e.g. BW Web Studio" class="w-full p-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-emerald-500 text-sm text-white">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">Busy / Fallback Message</label>
+                                <textarea id="persona-busy-msg" placeholder="e.g. Abhi Burhanuddin busy hai, wo aapse aake baat karenge! 🙏" class="w-full p-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-emerald-500 text-sm text-white h-20"></textarea>
+                                <p class="text-[11px] text-slate-400 mt-1">Sent when AI API key is missing or server busy.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Typing Speed & Behavior Card -->
+                    <div class="glass p-6 rounded-2xl flex flex-col">
+                        <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">
+                            <i class="fas fa-keyboard"></i> WhatsApp Typing Simulation
+                        </h3>
+                        
+                        <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-4 mb-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-sm">Show "typing..." Indicator</h4>
+                                    <p class="text-xs text-slate-400">Simulate real human typing on WhatsApp before replying</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="persona-typing-toggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1">Typing Speed</label>
+                                <select id="persona-typing-speed" class="w-full p-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm text-white">
+                                    <option value="fast">⚡ Fast (Quick responses)</option>
+                                    <option value="normal" selected>😊 Normal (Natural human typing speed)</option>
+                                    <option value="slow">⏳ Realistic Slow (Longer typing pause for credibility)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full Custom System Prompt & Presets -->
+                    <div class="glass p-6 rounded-2xl col-span-1 lg:col-span-2">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                            <div>
+                                <h3 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                                    <i class="fas fa-brain"></i> AI Custom System Prompt / Instructions
+                                </h3>
+                                <p class="text-xs text-slate-400">Leave blank to use the built-in natural human persona, or write your own custom rules.</p>
+                            </div>
+                            <!-- Preset Buttons -->
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="applyPromptPreset('human')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 rounded-lg border border-slate-700 font-medium">👤 Human Persona</button>
+                                <button onclick="applyPromptPreset('sales')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-blue-400 rounded-lg border border-slate-700 font-medium">💼 Sales Rep</button>
+                                <button onclick="applyPromptPreset('support')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-purple-400 rounded-lg border border-slate-700 font-medium">🎧 Customer Support</button>
+                            </div>
+                        </div>
+
+                        <textarea id="persona-system-prompt" placeholder="Write custom instructions for the AI here..." class="w-full p-4 bg-slate-900 rounded-xl border border-slate-700 outline-none focus:border-amber-500 text-sm text-slate-200 font-mono h-48"></textarea>
+                        
+                        <div class="flex justify-between items-center mt-4">
+                            <button onclick="savePersonaSettings()" class="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+                                <i class="fas fa-save mr-2"></i> Save Bot Customizations
+                            </button>
+                            <p id="persona-success" class="text-emerald-400 text-sm hidden font-bold"><i class="fas fa-check-circle mr-1"></i> Persona saved successfully!</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Tab: Auto-Replies (Keywords & Blocks) -->
+            <div id="tab-rules" class="tab-content hidden h-full flex flex-col">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Rules & Logic</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass p-6 rounded-2xl flex flex-col">
+                        <h2 class="text-xl font-bold mb-4 text-emerald-400">Static Auto-Replies</h2>
+                        <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700 mb-4">
+                            <input type="text" id="new-topics" placeholder="Keywords (comma separated)" class="w-full p-2 mb-2 bg-slate-900 rounded border border-slate-700 outline-none focus:border-emerald-500 text-sm">
+                            <textarea id="new-reply" placeholder="Reply message..." class="w-full p-2 mb-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-emerald-500 text-sm h-16"></textarea>
+                            <button onclick="addKeyword()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded transition-all">Add Rule</button>
+                        </div>
+                        <div id="keywords-list" class="flex flex-col gap-3 overflow-y-auto max-h-[300px] pr-2"></div>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl flex flex-col h-fit">
+                        <h2 class="text-xl font-bold mb-4 text-red-400">Blocked Numbers</h2>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="new-blocked" placeholder="Phone Number (e.g. 919876543210)" class="flex-grow p-2 bg-slate-900 rounded border border-slate-700 outline-none focus:border-red-500 text-sm">
+                            <button onclick="addBlocked()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded transition-all">Block</button>
+                        </div>
+                        <div id="blocked-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    
+                    <!-- Business Hours Section -->
+                    <div class="glass p-6 rounded-2xl flex flex-col mt-2 col-span-1 lg:col-span-2">
+                        <h2 class="text-xl font-bold mb-4 text-blue-400">Business Hours (Timing)</h2>
+                        <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700 mb-2">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold">Enable Business Hours</h3>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="bh-toggle" class="sr-only peer" onchange="saveBusinessHours()">
+                                    <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="text-xs text-slate-400">Start Time</label>
+                                    <input type="time" id="bh-start" onchange="saveBusinessHours()" class="w-full p-2 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="text-xs text-slate-400">End Time</label>
+                                    <input type="time" id="bh-end" onchange="saveBusinessHours()" class="w-full p-2 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm text-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400">Offline Message</label>
+                                <textarea id="bh-msg" onchange="saveBusinessHours()" class="w-full p-2 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm h-16 text-white"></textarea>
+                            </div>
+                            <p id="bh-success" class="text-emerald-400 text-sm mt-2 hidden"><i class="fas fa-check"></i> Saved successfully</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Tab: AI Brain & Knowledge -->
+            <div id="tab-brain" class="tab-content hidden h-full flex flex-col">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">AI Key & Excel Knowledge Base</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="glass p-6 rounded-2xl">
+                        <h2 class="text-xl font-bold mb-2">AI API Configuration</h2>
+                        <p class="text-sm text-slate-400 mb-6">Supports OpenAI, Google Gemini, Groq, & OpenRouter keys.</p>
+                        
+                        <div class="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-700 mb-6">
+                            <div>
+                                <h3 class="font-bold">Enable AI Fallback</h3>
+                                <p class="text-xs text-slate-400">Use AI when keywords don't match</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="ai-toggle" class="sr-only peer" onchange="toggleAI()">
+                                <div class="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="text-sm font-bold text-slate-300">API Key</label>
+                            <input type="password" id="api-key" placeholder="AQ... or sk-..." class="w-full p-3 mt-1 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <button onclick="saveApiKey()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-all">Save API Key</button>
+                        <p id="api-key-success" class="text-emerald-400 text-sm mt-2 hidden text-center"><i class="fas fa-check"></i> Key saved successfully</p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl">
+                        <h2 class="text-xl font-bold mb-2">Excel Knowledge Base (RAG)</h2>
+                        <p class="text-sm text-slate-400 mb-6">Upload product catalog or FAQs (data.xlsx).</p>
+                        
+                        <div class="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 transition-all bg-slate-800/30">
+                            <i class="fas fa-file-excel text-4xl text-emerald-500 mb-4"></i>
+                            <h3 class="font-bold mb-2">Upload data.xlsx</h3>
+                            <input type="file" id="excel-file" accept=".xlsx" class="mb-4 text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                            <button onclick="uploadExcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded transition-all shadow-lg shadow-emerald-500/30">Upload to Knowledge Base</button>
+                            <p id="upload-success" class="text-emerald-400 text-sm mt-2 hidden"><i class="fas fa-check"></i> File updated successfully</p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <!-- Tab: Security & Admin Password -->
+            <div id="tab-settings" class="tab-content hidden h-full flex flex-col">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Security & Admin Password</h2>
+                <div class="max-w-md glass p-6 rounded-2xl">
+                    <h3 class="text-xl font-bold mb-2 text-slate-200">Change Admin Password</h3>
+                    <p class="text-xs text-slate-400 mb-4">Set a strong password for accessing this dashboard panel.</p>
+                    <input type="password" id="new-password" placeholder="New Password" class="w-full p-3 bg-slate-900 rounded border border-slate-700 outline-none focus:border-blue-500 text-sm mb-4">
+                    <button onclick="changePassword()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition-all">Update Password</button>
+                    <p id="pwd-success" class="text-emerald-400 text-sm mt-2 hidden text-center"><i class="fas fa-check"></i> Password updated successfully</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- BW Web Studio Trademark -->
+    <div style="position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; padding: 10px 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.08); z-index: 9999;">
+        <p style="margin: 0; font-size: 12px; color: #94a3b8; letter-spacing: 1px;">
+            Powered by <span style="font-weight: 700; background: linear-gradient(90deg, #3b82f6, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">BW Web Studio</span> ™
+        </p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

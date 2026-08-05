@@ -1,0 +1,30 @@
+2026/08/05-20:41:18.498 2704 Reusing MANIFEST C:\Users\DELL\Desktop\ai auto calling\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/05-20:41:18.500 2704 Recovering log #1080
+2026/08/05-20:41:18.540 2704 Reusing old log C:\Users\DELL\Desktop\ai auto calling\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/001080.log 
+2026/08/05-20:41:18.541 2704 Delete type=2 #1077
+2026/08/05-20:41:18.541 2704 Delete type=2 #1078
+2026/08/05-20:41:18.541 2704 Delete type=2 #1079
+2026/08/05-20:41:18.541 2704 Delete type=2 #1083
+2026/08/05-20:41:28.531 2704 Level-0 table #1099: started
+2026/08/05-20:41:28.587 2704 Level-0 table #1099: 1311197 bytes OK
+2026/08/05-20:41:28.589 2704 Delete type=0 #1080
+2026/08/05-20:41:28.735 2704 Compacting 1@0 + 0@1 files
+2026/08/05-20:41:28.921 2704 Generated table #1100@0: 27006 keys, 618108 bytes
+2026/08/05-20:41:28.927 2704 Generated table #1101@0: 166 keys, 45443 bytes
+2026/08/05-20:41:28.928 2704 Compacted 1@0 + 0@1 files => 663551 bytes
+2026/08/05-20:41:28.930 2704 compacted to: files[ 0 2 13 0 0 0 0 ]
+2026/08/05-20:41:28.974 2704 Compacting 1@1 + 10@2 files
+2026/08/05-20:41:29.119 2704 Generated table #1102@1: 52907 keys, 2190652 bytes
+2026/08/05-20:41:29.268 2704 Generated table #1103@1: 100364 keys, 2251887 bytes
+2026/08/05-20:41:29.410 2704 Generated table #1104@1: 70970 keys, 2295117 bytes
+2026/08/05-20:41:29.502 2704 Generated table #1105@1: 36762 keys, 2189469 bytes
+2026/08/05-20:41:29.624 2704 Generated table #1106@1: 58114 keys, 2225532 bytes
+2026/08/05-20:41:29.741 2704 Generated table #1107@1: 13942 keys, 2158176 bytes
+2026/08/05-20:41:29.793 2704 Generated table #1108@1: 1531 keys, 2145838 bytes
+2026/08/05-20:41:29.863 2704 Generated table #1109@1: 1321 keys, 2137713 bytes
+2026/08/05-20:41:29.974 2704 Generated table #1110@1: 11102 keys, 2181665 bytes
+2026/08/05-20:41:30.182 2704 Generated table #1111@1: 23801 keys, 2250630 bytes
+2026/08/05-20:41:30.195 2704 Generated table #1112@1: 276 keys, 16076 bytes
+2026/08/05-20:41:30.195 2704 Compacted 1@1 + 10@2 files => 22042755 bytes
+2026/08/05-20:41:30.201 2704 compacted to: files[ 0 1 14 0 0 0 0 ]
+2026/08/05-20:41:30.202 2704 Delete type=2 #1099
