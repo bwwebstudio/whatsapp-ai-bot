@@ -260,6 +260,21 @@ function removeBlocked(number) {
     }).then(() => fetchSettings());
 }
 
+// Reset WhatsApp Session & Regenerate QR
+function resetSession() {
+    if (!confirm('Do you want to regenerate QR / reset session?')) return;
+    fetch('/api/reset-session', {
+        method: 'POST',
+        headers: { 'Authorization': token }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('Resetting session... Please wait a few seconds for new QR.');
+        }
+    });
+}
+
 // Request WhatsApp Pairing Code (OTP)
 function requestPairingCode() {
     const numInput = document.getElementById('phone-number-input').value.trim();

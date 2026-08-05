@@ -238,6 +238,22 @@ app.post('/api/request-pairing-code', auth, async (req, res) => {
     }
 });
 
+// Manual Reset / Re-generate QR API
+app.post('/api/reset-session', auth, async (req, res) => {
+    try {
+        emitLog('Resetting WhatsApp session and generating new QR...', 'warning');
+        botStatus = 'RESTARTING...';
+        io.emit('status', botStatus);
+        
+        await client.destroy();
+        client.initialize();
+        res.json({ success: true });
+    } catch(err) {
+        console.error('Error resetting session:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Excel Upload
 app.post('/api/upload', auth, (req, res) => {
     if (!req.files || Object.keys(req.files).length === 0) {
@@ -326,6 +342,10 @@ if (process.env.PUPPETEER_EXECUTABLE_PATH) {
 
 const client = new Client({
     authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018944884-alpha.html'
+    },
     takeoverOnConflict: true,
     takeoverTimeoutMs: 0,
     puppeteer: puppeteerOptions
@@ -339,7 +359,7 @@ client.on('qr', async (qr) => {
         lastQrData = qrImage;
         io.emit('qr_image', qrImage);
         io.emit('status', botStatus);
-        emitLog('New QR Code generated. Please scan it from the dashboard.', 'warning');
+        emitLog('New QR Code generated. Please scan or use OTP code.', 'warning');
     } catch(err) {
         console.error('Error generating QR code image', err);
     }
@@ -349,11 +369,24 @@ client.on('loading_screen', (percent, message) => {
     botStatus = `SYNCING (${percent}%)`;
     emitLog(`WhatsApp Loading: ${percent}% - ${message}`, 'info');
     io.emit('status', botStatus);
+
+    // AUTO-VERIFY READY AT 100% (Prevents 90-second timeout loop!)
+    if (percent === 100 || percent === '100') {
+        setTimeout(() => {
+            if (botStatus !== 'READY') {
+                botStatus = 'READY';
+                lastQrData = null;
+                emitLog('WhatsApp Client is READY and CONNECTED! 🎉', 'success');
+                io.emit('status', botStatus);
+                io.emit('qr_image', null);
+            }
+        }, 2000);
+    }
 });
 
 client.on('authenticated', () => {
     botStatus = 'AUTHENTICATING';
-    emitLog('QR code scanned! Authenticating and syncing...', 'info');
+    emitLog('QR/OTP authenticated! Syncing WhatsApp...', 'info');
     io.emit('status', 'SYNCING...');
 });
 
