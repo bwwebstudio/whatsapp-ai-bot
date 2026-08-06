@@ -29,8 +29,8 @@ RUN npm install --production
 # Copy application files
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Expose port (3000 for Render/Koyeb, 7860 for HuggingFace Spaces)
+EXPOSE 3000 7860
 
 # Start server
 CMD ["node", "server.js"]
