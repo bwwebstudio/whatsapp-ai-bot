@@ -100,22 +100,31 @@ const EXCEL_FILE = path.join(__dirname, 'data.xlsx');
 
 let settings = { password: 'admin', aiEnabled: true, openAiApiKey: '', keywords: [], blockedNumbers: [], businessHours: {}, botPersona: {} };
 if (fs.existsSync(SETTINGS_FILE)) {
-    settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
-    if (!settings.blockedNumbers) settings.blockedNumbers = [];
-    if (!settings.openAiApiKey) settings.openAiApiKey = '';
-    if (!settings.businessHours || !settings.businessHours.start) {
-        settings.businessHours = { enabled: false, start: '09:00', end: '18:00', offlineMessage: 'We are closed.' };
+    try {
+        settings = JSON.parse(fs.readFileSync(SETTINGS_FILE));
+    } catch(e) {
+        console.error('Error parsing settings.json:', e.message);
     }
-    if (!settings.botPersona) {
-        settings.botPersona = {
-            ownerName: 'Burhanuddin',
-            companyName: 'BW Web Studio',
-            busyFallbackMsg: 'Abhi Burhanuddin busy hai, wo aapse aake baat karenge! 🙏',
-            customSystemPrompt: '',
-            typingEnabled: true,
-            typingSpeed: 'normal'
-        };
-    }
+}
+if (!settings.blockedNumbers) settings.blockedNumbers = [];
+if (!settings.openAiApiKey) {
+    settings.openAiApiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+}
+if (process.env.ADMIN_PASSWORD) {
+    settings.password = process.env.ADMIN_PASSWORD;
+}
+if (!settings.businessHours || !settings.businessHours.start) {
+    settings.businessHours = { enabled: false, start: '09:00', end: '18:00', offlineMessage: 'We are closed.' };
+}
+if (!settings.botPersona) {
+    settings.botPersona = {
+        ownerName: 'Burhanuddin',
+        companyName: 'BW Web Studio',
+        busyFallbackMsg: 'Abhi Burhanuddin busy hai, wo aapse aake baat karenge! 🙏',
+        customSystemPrompt: '',
+        typingEnabled: true,
+        typingSpeed: 'normal'
+    };
 }
 function saveSettings() {
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
@@ -298,7 +307,11 @@ function isWithinBusinessHours() {
     const [endH, endM] = (settings.businessHours.end || '23:59').split(':').map(Number);
     const endMinutes = endH * 60 + endM;
     
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    if (startMinutes <= endMinutes) {
+        return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+    } else {
+        return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+    }
 }
 
 // WhatsApp Bot Logic
@@ -328,8 +341,6 @@ let puppeteerOptions = {
         '--disable-domain-reliability',
         '--disable-ipc-flooding-protection',
         '--disable-renderer-backgrounding',
-        '--blink-settings=imagesEnabled=false',
-        '--disable-remote-fonts',
         '--js-flags=--max-old-space-size=150'
     ],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
@@ -347,7 +358,7 @@ const client = new Client({
     authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
     webVersionCache: {
         type: 'remote',
-        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018944884-alpha.html'
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1014587000-alpha.html'
     },
     takeoverOnConflict: true,
     takeoverTimeoutMs: 0,
@@ -419,46 +430,31 @@ client.on('disconnected', async (reason) => {
 client.on('ready', () => {
     botStatus = 'READY';
     lastQrData = null;
-    emitLog('WhatsApp Client is READY!', 'success');
+    emitLog('WhatsApp Client is READY and ACTIVE!', 'success');
+    console.log('[RENDER LOG] === WHATSAPP BOT IS LIVE AND LISTENING FOR MESSAGES ===');
     io.emit('status', botStatus);
     io.emit('qr_image', null); // clear QR
 });
 
-client.on('message', async (message) => {
-    console.log(`[RAW-MESSAGE-DEBUG] From: ${message.from} | Type: ${message.type} | Body: ${message.body} | fromMe: ${message.fromMe}`);
-    
+client.on('message_create', async (message) => {
     // CRITICAL: Ignore messages sent by the bot itself (prevents infinite reply loops)
-    if (message.fromMe) {
-        console.log(`[DEBUG] Ignored own message (fromMe=true)`);
-        return;
-    }
-
-    // Only reply to actual text chat messages (ignore stickers, images without caption, reactions, etc.)
-    if (message.type !== 'chat') {
-        console.log(`[DEBUG] Ignored non-chat message type: ${message.type}`);
-        return;
-    }
-
-    // Skip empty messages
-    if (!message.body || message.body.trim() === '') {
-        console.log(`[DEBUG] Ignored empty message from ${message.from}`);
-        return;
-    }
+    if (message.fromMe) return;
 
     // Skip group messages, status updates, and broadcast lists
-    if (message.isGroupMsg || message.isStatus || message.from === 'status@broadcast') {
-        console.log(`[DEBUG] Ignored message from ${message.from}. isGroupMsg: ${message.isGroupMsg}, isStatus: ${message.isStatus}`);
+    if (message.isGroupMsg || message.isStatus || message.from === 'status@broadcast' || message.from.includes('@g.us')) {
         return;
     }
 
-    // Allow personal chats (@c.us) and linked/new format chats (@lid)
-    if (!message.from.endsWith('@c.us') && !message.from.endsWith('@lid')) {
-        console.log(`[DEBUG] Ignored message from unknown format: ${message.from}`);
-        return; 
+    // Skip non-chat types or empty messages
+    if (message.type !== 'chat' || !message.body || message.body.trim() === '') {
+        return;
     }
 
-    const senderNumber = message.from.split('@')[0];
+    const rawSender = message.from.split('@')[0];
+    const senderNumber = rawSender.split(':')[0];
     
+    console.log(`[RENDER LOG] [INCOMING MESSAGE] From: ${senderNumber} | Text: "${message.body}"`);
+
     if (settings.blockedNumbers.includes(senderNumber)) {
         emitLog(`Blocked number ${senderNumber} sent a message. Ignored.`, 'warning');
         return;
@@ -486,7 +482,11 @@ client.on('message', async (message) => {
             await randomDelay(2, 4);
         }
         
-        await message.reply(offlineMsg);
+        try {
+            await message.reply(offlineMsg);
+        } catch(e) {
+            console.error('[REPLY ERROR]', e.message);
+        }
         return;
     }
 
@@ -509,8 +509,12 @@ client.on('message', async (message) => {
             await randomDelay(2, 5);
         }
         
-        await message.reply(staticReply);
-        emitLog(`Reply sent: ${staticReply}`, 'msg-out');
+        try {
+            await message.reply(staticReply);
+            emitLog(`Reply sent: ${staticReply}`, 'msg-out');
+        } catch(e) {
+            console.error('[REPLY ERROR]', e.message);
+        }
         return;
     }
 
@@ -537,8 +541,12 @@ client.on('message', async (message) => {
             await randomDelay(3, 6);
         }
         
-        await message.reply(reply);
-        emitLog(`🤖 AI Reply sent: ${reply}`, 'msg-out');
+        try {
+            await message.reply(reply);
+            emitLog(`🤖 AI Reply sent: ${reply}`, 'msg-out');
+        } catch(e) {
+            console.error('[REPLY ERROR]', e.message);
+        }
     } else {
         emitLog('No keyword match and AI is disabled. Ignored.', 'info');
     }

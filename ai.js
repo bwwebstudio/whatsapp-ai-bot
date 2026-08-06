@@ -118,7 +118,7 @@ async function generateAnswer(userMessage, contextData, apiKey, conversationHist
     // Auto-detect Provider based on API Key prefix
     if (apiKey.startsWith("AIza") || apiKey.startsWith("AQ.")) {
         baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
-        modelName = "gemini-3.5-flash";
+        modelName = "gemini-1.5-flash";
         console.log("[AI] Detected Google Gemini API Key");
     } else if (apiKey.startsWith("sk-or-v1-")) {
         baseURL = "https://openrouter.ai/api/v1";
@@ -127,7 +127,7 @@ async function generateAnswer(userMessage, contextData, apiKey, conversationHist
         console.log("[AI] Detected OpenRouter API Key");
     } else if (apiKey.startsWith("gsk_")) {
         baseURL = "https://api.groq.com/openai/v1";
-        modelName = "llama3-8b-8192";
+        modelName = "llama-3.1-8b-instant";
         console.log("[AI] Detected Groq API Key");
     } else if (apiKey.startsWith("sk-")) {
         baseURL = undefined; // Uses default OpenAI url
@@ -135,7 +135,7 @@ async function generateAnswer(userMessage, contextData, apiKey, conversationHist
         console.log("[AI] Detected OpenAI API Key");
     } else {
         baseURL = "https://generativelanguage.googleapis.com/v1beta/openai/";
-        modelName = "gemini-3.5-flash";
+        modelName = "gemini-1.5-flash";
         console.log("[AI] Unknown API Key format, trying Gemini endpoint...");
     }
 
