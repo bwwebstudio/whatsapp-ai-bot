@@ -385,19 +385,6 @@ client.on('loading_screen', (percent, message) => {
     botStatus = `SYNCING (${percent}%)`;
     emitLog(`WhatsApp Loading: ${percent}% - ${message}`, 'info');
     io.emit('status', botStatus);
-
-    // AUTO-VERIFY READY AT 100%
-    if (percent === 100 || percent === '100') {
-        setTimeout(() => {
-            if (botStatus !== 'READY') {
-                botStatus = 'READY';
-                lastQrData = null;
-                emitLog('WhatsApp Client is READY and CONNECTED! 🎉', 'success');
-                io.emit('status', botStatus);
-                io.emit('qr_image', null);
-            }
-        }, 2000);
-    }
 });
 
 client.on('authenticated', () => {
