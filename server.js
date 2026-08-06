@@ -315,7 +315,8 @@ let puppeteerOptions = {
         '--disable-extensions',
         '--disable-component-extensions-with-background-pages',
         '--disable-default-apps',
-        '--disable-features=Translate,BackForwardCache,MediaRouter',
+        '--disable-features=IsolateOrigins,site-per-process,Translate,BackForwardCache,MediaRouter',
+        '--disable-site-isolation-trials',
         '--disable-background-networking',
         '--disable-sync',
         '--mute-audio',
@@ -329,7 +330,7 @@ let puppeteerOptions = {
         '--disable-renderer-backgrounding',
         '--blink-settings=imagesEnabled=false',
         '--disable-remote-fonts',
-        '--js-flags=--max-old-space-size=256'
+        '--js-flags=--max-old-space-size=150'
     ],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 };
@@ -354,12 +355,6 @@ const client = new Client({
 });
 
 client.on('qr', async (qr) => {
-    // CRITICAL FIX: If WhatsApp is ALREADY connected, ignore stray background QR events!
-    if (botStatus === 'READY') {
-        console.log('[DEBUG] Ignored stray background QR event because WhatsApp is ALREADY READY.');
-        return;
-    }
-
     console.log('\n--- QR CODE GENERATED ---');
     try {
         const qrImage = await qrcode.toDataURL(qr);
@@ -380,7 +375,7 @@ client.on('loading_screen', (percent, message) => {
     emitLog(`WhatsApp Loading: ${percent}% - ${message}`, 'info');
     io.emit('status', botStatus);
 
-    // AUTO-VERIFY READY AT 100% (Prevents 90-second timeout loop!)
+    // AUTO-VERIFY READY AT 100%
     if (percent === 100 || percent === '100') {
         setTimeout(() => {
             if (botStatus !== 'READY') {
@@ -407,10 +402,15 @@ client.on('auth_failure', msg => {
     io.emit('status', botStatus);
 });
 
-client.on('disconnected', (reason) => {
+client.on('disconnected', async (reason) => {
     emitLog('WhatsApp Disconnected: ' + reason + '. Auto-reconnecting in 5 seconds...', 'error');
     botStatus = 'RECONNECTING...';
     io.emit('status', botStatus);
+    try {
+        await client.destroy();
+    } catch (e) {
+        console.log('[DEBUG] Error destroying client on disconnect:', e.message);
+    }
     setTimeout(() => {
         client.initialize().catch(err => console.error('[RECONNECT ERROR]', err));
     }, 5000);
@@ -542,6 +542,13 @@ client.on('message', async (message) => {
     } else {
         emitLog('No keyword match and AI is disabled. Ignored.', 'info');
     }
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT EXCEPTION]', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]', reason);
 });
 
 client.initialize();
