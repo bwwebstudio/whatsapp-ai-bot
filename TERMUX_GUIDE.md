@@ -22,9 +22,10 @@ cd bwwebstudio-whatsapp-ai-bot
 git pull
 ```
 
-### 4. Project dependencies install karein:
+### 4. Project dependencies install karein (Puppeteer download error se bachne ke liye):
 ```bash
-npm install
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+npm install --ignore-scripts
 ```
 
 ### 5. Server start karein:
